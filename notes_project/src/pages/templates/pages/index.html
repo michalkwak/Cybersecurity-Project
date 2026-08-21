@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>My notes</title></head>
+<body>
+    <p><a href="{% url 'logout' %}">Log out</a></p>
+
+    <h1>My notes</h1>
+
+    <h2>New note</h2>
+    <form method="post">
+        {% csrf_token %}
+        <input type="text" name="title" placeholder="Title"><br>
+        <textarea name="body" placeholder="Write something..."></textarea><br>
+        <button type="submit">Save</button>
+    </form>
+
+    <h2>Search</h2>
+    <form method="get">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search by title">
+        <button type="submit">Search</button>
+    </form>
+
+    {% for note in notes %}
+        <p><a href="{% url 'note-detail' note.id %}">{{ note.title }}</a></p>
+    {% empty %}
+        <p>No notes found.</p>
+    {% endfor %}
+</body>
+</html>

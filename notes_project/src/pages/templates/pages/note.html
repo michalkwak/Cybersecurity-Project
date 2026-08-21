@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>{{ note.title }}</title></head>
+<body>
+    <p><a href="{% url 'index' %}">Back to my notes</a></p>
+
+    <h1>{{ note.title }}</h1>
+
+    <!-- Flaw 4 (A05:2025 Injection - stored XSS)
+    |safe disables auto-escaping, so <script> in the body executes -->
+    <div>{{ note.body|safe }}</div> 
+
+    <!-- Fix: remove |safe 
+    <div>{{ note.body }}</div> -->
+</body>
+</html>
