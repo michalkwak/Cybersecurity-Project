@@ -9,7 +9,7 @@ def register(request):
         username = request.POST.get("username", "")
         password = request.POST.get("password", "")
 
-        # Flaw 1 (A04:2025 Cryptographic Failures)
+        # Flaw 1 (A04:2025 Cryptographic Failures / A07:2025 Authentication Failures)
         # The password is stored as a plain text not encrypted in any way
         user = User.objects.create(username=username, password=password)
 
@@ -23,6 +23,8 @@ def register(request):
 
 
 def login_view(request):
+    # Flaw 2 (A07:2025 Authentication Failures)
+    # There is no block against brute forcing the password
     error = None
     if request.method == "POST":
         username = request.POST.get("username", "")
@@ -31,12 +33,18 @@ def login_view(request):
         # Plain string filtering
         user = User.objects.filter(username=username, password=password).first()
 
-        # Fix:
+        # Fix to Flaw 1:
         # from django.contrib.auth.hashers import check_password
         # user = User.objects.filter(username=username).first()
         # if user and not check_password(password, user.password):
         #     user = None
 
+        # Fix to Flaw 2:
+        # from django.core.cache import cache
+        # cache_key = f"login_attempts_{username}"
+        # attempts = cache.get(cache_key, 0)
+        # if attempts >= 5:
+        #     error = "Too many login attempts. Please try again later."
         if user:
             request.session["user_id"] = user.id
             return redirect("index")
@@ -67,11 +75,10 @@ def index(request):
     if query:
         # Flaw 2 (A05:2025 Injection - SQL injection)
         # The note search box is in raw SQL
-        # Injection example: x' UNION SELECT id, username || ':' || password FROM pages_user--
+        # For example: "x' UNION SELECT id, username || ':' || password FROM pages_user--" returns
+        # all users and their passwords
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT id, title FROM pages_note WHERE title LIKE '%%%s%%'" % query
-            )
+            cursor.execute("SELECT id, title FROM pages_note WHERE title LIKE '%%%s%%'" % query)
             notes = [{"id": row[0], "title": row[1]} for row in cursor.fetchall()]
 
         # Fix:
@@ -86,7 +93,7 @@ def note_detail(request, pk):
     if not request.session.get("user_id"):
         return redirect("login")
 
-    # Flaw 3 (A01:2025 Broken Access Control)
+    # Flaw 4 (A01:2025 Broken Access Control)
     # Any logged in user can read any note just by changing the id in the URL
     # There's no check that note.owner matches the session user
     note = Note.objects.filter(pk=pk).first()
