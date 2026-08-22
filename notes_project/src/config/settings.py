@@ -17,16 +17,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-this-key-is-for-a-course-exercise-only'
 
-# Flaw 5 (A02:2025 Security Misconfiguration)
-# DEBUG on and any Host is accepted 
-# Unhandled errors leak full stack traces
-# to visitors and the app answers to any Host header
-DEBUG = True
-ALLOWED_HOSTS = ['*']
-
-# Fix:
-# DEBUG = False
-# ALLOWED_HOSTS = ['real-domain.com']
+DEBUG = False
+ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.admin',

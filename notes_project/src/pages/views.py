@@ -9,8 +9,8 @@ def register(request):
         username = request.POST.get("username", "")
         password = request.POST.get("password", "")
 
-        # Flaw 1 (A04:2025 Cryptographic Failures / A07:2025 Authentication Failures)
-        # The password is stored as a plain text not encrypted in any way
+        # Flaw 1 (A04:2021 Cryptographic Failures / A07:2021 – Identification and Authentication Failures)
+        # The password is stored as plain text (not encrypted)
         user = User.objects.create(username=username, password=password)
 
         # Fix:
@@ -23,14 +23,13 @@ def register(request):
 
 
 def login_view(request):
-    # Flaw 2 (A07:2025 Authentication Failures)
-    # There is no block against brute forcing the password
+    # Flaw 2 (A07:2021 – Identification and Authentication Failures)
+    # There is no prevention against brute forcing the password
     error = None
     if request.method == "POST":
         username = request.POST.get("username", "")
         password = request.POST.get("password", "")
 
-        # Plain string filtering
         user = User.objects.filter(username=username, password=password).first()
 
         # Fix to Flaw 1:
@@ -73,10 +72,10 @@ def index(request):
 
     query = request.GET.get("q", "")
     if query:
-        # Flaw 2 (A05:2025 Injection - SQL injection)
+        # Flaw 3 (A05:2021 Injection)
         # The note search box is in raw SQL
-        # For example: "x' UNION SELECT id, username || ':' || password FROM pages_user--" returns
-        # all users and their passwords
+        # For example: "x' UNION SELECT id, username || ':' || password FROM pages_user--" 
+        # returns all users and their passwords
         with connection.cursor() as cursor:
             cursor.execute("SELECT id, title FROM pages_note WHERE title LIKE '%%%s%%'" % query)
             notes = [{"id": row[0], "title": row[1]} for row in cursor.fetchall()]
@@ -93,12 +92,12 @@ def note_detail(request, pk):
     if not request.session.get("user_id"):
         return redirect("login")
 
-    # Flaw 4 (A01:2025 Broken Access Control)
+    # Flaw 4 (A01:2021 Broken Access Control)
     # Any logged in user can read any note just by changing the id in the URL
-    # There's no check that note.owner matches the session user
     note = Note.objects.filter(pk=pk).first()
 
     # Fix:
+    # Check that note.owner matches the session user
     # me_id = request.session["user_id"]
     # note = Note.objects.filter(pk=pk, owner_id=me_id).first()
 

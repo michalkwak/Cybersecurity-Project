@@ -5,13 +5,7 @@
     <h1>Log in</h1>
     {% if error %}<p>{{ error }}</p>{% endif %}
     <form method="post">
-        <!-- Flaw 6 - Missing CSRF token
-
-        The CSRF token protects the POST form from Cross-Site
-        Request Forgery attacks. Without it, an attacker could
-        potentially create a malicious page that sends a request
-        to this application using a victim's browser.
-
+        <!-- Flaw 5 - Missing CSRF token
         Fix: Add {% csrf_token %} inside the form -->
 
         <!-- {% csrf_token %} -->
